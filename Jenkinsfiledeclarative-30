@@ -1,0 +1,65 @@
+pipeline{
+    agent any
+    tools {
+      maven "maven_3.8.6"
+    }
+    stages {
+   		stage('1cloneCode'){
+   		steps{
+   		 sh "echo 'cloning the latest application version'"
+   		 git branch: 'feature', credentialsId: 'github credentials', url: 'https://github.com/izehio/maven-web-application'
+   		}
+   		}
+
+  		stage('2Test&Build'){
+  			steps{
+  				sh "echo 'running Junit-test-case'"
+  				sh "echo 'testing must pass to create artifacts'" 
+  				sh "mvn package"
+  			}
+  		}
+  		
+  		 		stage('3codeQuality'){
+  		   steps{
+  				sh "echo 'performing code quality analysis' " 
+  				sh "mvn sonar:sonar "
+    } 	
+}
+	       stage('4uploadArtifactsNexus'){
+ 			steps{
+  			sh "mvn deploy"
+}
+}
+        stage('5deploy2Prod'){
+        steps{
+  		deploy adapters: [tomcat9(credentialsId: 'tomcatcredentials', path: '', url: 'http://184.73.22.229:8080/')], contextPath: null, war: 'target/*war'
+}
+}
+}
+  
+    post{
+    		always{
+    		emailext body: '''Hey guys
+ 				Kindly check status of project
+
+				Thanks
+				Landmark''', recipientProviders: [buildUser()], subject: 'always', to: 'walmartproject2team@gmail.com'
+				}
+    		
+    		success{
+    		emailext body: '''Hey guys
+				Good job build and deployment is succesful
+
+				Thanks
+				Landmark''', recipientProviders: [buildUser()], subject: 'success', to: 'walmartproject2team@gmail.com'
+    		}
+
+    		failure{
+    		emailext body: '''Hey guys
+				Please resolve deployment failed
+
+				Thanks
+				Landmark''', recipientProviders: [buildUser()], subject: 'failure', to: 'walmartproject2team@gmail.com'
+    		}
+    }
+}   
